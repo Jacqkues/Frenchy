@@ -13,8 +13,19 @@ mod stmt;
 mod environment;
 mod callable;
 mod builtin;
+mod resolver_visitor;
 use std::process::Command;
+
+
+
+
+
+
+
+
+
 fn main() {
+  
     let _output = Command::new("clear")
         .output()
         .expect("Failed to execute command");
@@ -60,6 +71,7 @@ fn main() {
 
 
     let mut interpreter = interpret_visitor::InterpretVisitor::new();
+    let mut resolver = resolver_visitor::ResolverVisitor::new(&mut interpreter);
 
     let filename = "/home/cytech/Desktop/Projet_Perso/Frenchy/frenchy/target/debug/main.fr";
     let input = fs::read_to_string(filename).expect("Failed to read file");
@@ -68,6 +80,8 @@ fn main() {
     lexer.scan_tokens();
     let mut parser = parser::Parser::new(lexer.tokens);
     let expr = parser.parse();
+   // println!("{:?}",expr);
+    resolver.resolve(&expr);
     let result = interpreter.interpret(&expr);
     match result {
         Ok(value) => println!("Result: {:?}", value),

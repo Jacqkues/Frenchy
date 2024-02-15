@@ -1,3 +1,5 @@
+use std::hash::{Hash, Hasher};
+
 #[derive(Debug, PartialEq,Clone)]
 pub enum TokenType {
     // Single-character tokens.
@@ -86,5 +88,14 @@ impl std::fmt::Display for Token {
             "{:?} {} {:?}",
             self.token_type, self.lexeme, self.literal
         )
+    }
+}
+
+impl Eq for Token {}
+
+impl Hash for Token {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.lexeme.hash(state);
+        self.line.hash(state);
     }
 }

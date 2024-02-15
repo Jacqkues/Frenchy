@@ -229,11 +229,7 @@ impl Parser {
 
     fn if_statement(&mut self) -> Stmt {
         
-        let condition = self.expression();
-       
-
-
-        
+        let condition = self.expression();        
         let then_branch = self.statement();
         let else_branch = if self.match_token(TokenType::ELSE) {
             Some(Box::new(self.statement()))
@@ -576,7 +572,6 @@ impl Parser {
                 
 
                 arguments.push(self.expression());
-                //todo verify arguments size
                 if !self.match_token(TokenType::COMMA) {
                     break;
                 }

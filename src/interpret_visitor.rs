@@ -1,10 +1,13 @@
+use std::clone;
+use std::collections::HashMap;
 use std::rc::Rc;
-use std::{borrow::Borrow, cell::RefCell};
+use std::{ cell::RefCell};
 
 use crate::builtin::{afficher, clock};
 use crate::callable::Callable;
 use crate::stmt::ReturnStmt;
-use crate::value::{self, NativeFunction, Function};
+use crate::token::Token;
+use crate::value::{self, Function, NativeFunction};
 use crate::{
     environment::Environment,
     error::RuntimeError,
@@ -13,10 +16,11 @@ use crate::{
     value::Value,
     visitor::{ExprVisitor, StmtVisitor},
 };
-
+#[derive(Debug,Clone)]
 pub struct InterpretVisitor {
-    pub global : Rc<RefCell<Environment>>,
+    pub global: Rc<RefCell<Environment>>,
     environment: Rc<RefCell<Environment>>,
+    locals: HashMap<Token, i32>,
 }
 
 impl ExprVisitor for InterpretVisitor {
@@ -30,11 +34,13 @@ impl ExprVisitor for InterpretVisitor {
 
             if arg != Value::Nil {
                 arguments.push(arg);
+               
             }
         }
-        println!("\t[++] appel de la fonction : {} avec les arguments : {:?}", &callee, &arguments);
+      //  println!("\t\t\t\t[argument : {:?}]", &arguments);
         match callee {
             Value::NativeFunction(function) => {
+                println!("call native function : {:?}", &function.name);
                 if arguments.len() != function.arity {
                     return Err(RuntimeError::Error {
                         token: expr.paren.clone(),
@@ -48,7 +54,7 @@ impl ExprVisitor for InterpretVisitor {
                 function.call(self, arguments)
             }
             Value::Function(function) => {
-               // println!("{}({:?})", &function.stmt.name, &arguments);
+                // println!("{}({:?})", &function.stmt.name, &arguments);
                 if arguments.len() != function.stmt.params.len() {
                     return Err(RuntimeError::Error {
                         token: expr.paren.clone(),
@@ -86,24 +92,41 @@ impl ExprVisitor for InterpretVisitor {
 
     fn visit_variable_expr(&mut self, expr: &crate::expr::VariableExpr) -> Self::Output {
         //println!("---------------getting variable : {:?}", &expr.name.lexeme);
-        let ret = self.environment.borrow_mut().get(&expr.name).unwrap();
-        println!("\tlecture de la variable : {:?} : {:?}",&expr.name.lexeme, &ret);
-        Ok(ret)
+       // let ret = self.environment.borrow_mut().get(&expr.name).unwrap();
+       /*  println!(
+            "\tlecture de la variable : {:?} : {:?}",
+            &expr.name.lexeme, &ret
+        );*/
+
+        Ok(self.lookup_variable(&expr.name).unwrap())
     }
 
     fn visit_assign_var_expr(&mut self, expr: &crate::expr::AssignVarExpr) -> Self::Output {
-        let val = self.evaluate(&expr.value)?;
-        println!("---------------assigning variable {:?} : {:?}",&expr.name, &val);
+       /*  let val = self.evaluate(&expr.value)?;
+        println!(
+            "---------------assigning variable {:?} : {:?}",
+            &expr.name, &val
+        );
         self.environment
             .borrow_mut()
             .assign(&expr.name, val.clone())?;
+        Ok(val)*/
+
+        let val = self.evaluate(&expr.value)?;
+
+        if let Some(distance) = self.locals.get(&expr.name) {
+            self.environment.borrow_mut().assign_at(*distance, &expr.name, val.clone())?;
+        } else {
+            self.global.borrow_mut().assign(&expr.name, val.clone())?;
+        }
+
         Ok(val)
     }
 
     fn visit_binary_expr(&mut self, expr: &BinaryExpr) -> Result<Value, RuntimeError> {
         let left = self.evaluate(&expr.left)?;
         let right = self.evaluate(&expr.right)?;
-        println!("\t [operation : {}]," , &expr);
+       // println!("\t [operation : {}],", &expr);
         match expr.operator.lexeme.as_str() {
             "+" => Ok(left + right),
             "-" => Ok(left - right),
@@ -163,7 +186,7 @@ impl StmtVisitor for InterpretVisitor {
         match stmt.value {
             Some(ref expr) => {
                 let value = self.evaluate(expr)?;
-                println!("\t\t\t\t[return value : {}]", &value);
+               // println!("\t\t\t\t[return value : {}]", &value);
                 Err(RuntimeError::Return(value))
             }
             None => Err(RuntimeError::Return(Value::Nil)),
@@ -171,7 +194,7 @@ impl StmtVisitor for InterpretVisitor {
     }
 
     fn visit_function_stmt(&mut self, stmt: &crate::stmt::FunctionStmt) -> Self::Output {
-        let function = Value::Function(Function{
+        let function = Value::Function(Function {
             stmt: stmt.clone(),
             closure: Rc::clone(&self.environment),
         });
@@ -193,7 +216,7 @@ impl StmtVisitor for InterpretVisitor {
     fn visit_if_stmt(&mut self, stmt: &crate::stmt::IfStmt) -> Self::Output {
         let condition = self.evaluate(&stmt.condition)?;
 
-        println!("\t\t[condition:  {} resultat : {:?}]",&stmt.condition, &condition);
+        //println!("\t\t[condition:  {} resultat : {:?}]",&stmt.condition, &condition);
         if InterpretVisitor::is_truthy(&condition) {
             self.execute(&stmt.then_branch)?;
         } else if let Some(else_branch) = &stmt.else_branch {
@@ -208,17 +231,23 @@ impl StmtVisitor for InterpretVisitor {
     }
 
     fn visit_block_stmt(&mut self, stmt: &crate::stmt::BlockStmt) -> Self::Output {
-      //  let previous_environment = Rc::clone(&self.environment);
+        //  let previous_environment = Rc::clone(&self.environment);
 
         // Create a new environment for the block
-      /*   self.environment = Rc::new(RefCell::new(Environment::new_enclosed(
+        /*   self.environment = Rc::new(RefCell::new(Environment::new_enclosed(
             self.environment.clone(),
         )));*/
 
-        self.execute_block(&stmt.statements, Rc::new(RefCell::new(Environment::new_enclosed(&self.environment,4))))?;
+        self.execute_block(
+            &stmt.statements,
+            Rc::new(RefCell::new(Environment::new_enclosed(
+                &self.environment,
+                4,
+            ))),
+        )?;
 
         // Restore the previous environment after executing the block
-      //  self.environment = previous_environment;
+        //  self.environment = previous_environment;
         Ok(())
     }
 
@@ -232,7 +261,7 @@ impl StmtVisitor for InterpretVisitor {
     fn visit_var_stmt(&mut self, stmt: &crate::stmt::VarStmt) -> Self::Output {
         let mut val = None;
         match &stmt.initializer {
-            Some(expr) => {
+            Some(ref expr) => {
                 val = Some(self.evaluate(expr)?);
             }
             None => val = Some(Value::Nil),
@@ -249,7 +278,7 @@ impl StmtVisitor for InterpretVisitor {
 impl InterpretVisitor {
     pub fn new() -> Self {
         let global = Rc::new(RefCell::new(Environment::new()));
-       /*  let env = InterpretVisitor {
+        /*  let env = InterpretVisitor {
             global: Rc::new(RefCell::new(Environment::new())),
         };*/
 
@@ -267,17 +296,14 @@ impl InterpretVisitor {
 
         let clock_value = Value::NativeFunction(clock_function);
         let print_value = Value::NativeFunction(print_function);
-        global
-            .borrow_mut()
-            .define("clock".to_string(), clock_value);
+        global.borrow_mut().define("clock".to_string(), clock_value);
 
-        global
-            .borrow_mut()
-            .define("print".to_string(), print_value);
+        global.borrow_mut().define("print".to_string(), print_value);
 
         InterpretVisitor {
             global: Rc::clone(&global),
             environment: Rc::clone(&global),
+            locals: HashMap::new(),
         }
     }
 
@@ -303,7 +329,7 @@ impl InterpretVisitor {
         match value {
             Value::Nil => "nil".to_string(),
             Value::Number(num) => num.to_string(),
-            Value::String(string) => string.clone(),
+            Value::String(string) => string.clone().to_string(),
             Value::Boolean(bool) => bool.to_string(),
             Value::NativeFunction(function) => format!("{:?}", function),
             Value::Function(function) => format!("{:?}", function),
@@ -315,11 +341,7 @@ impl InterpretVisitor {
         stmts: &Vec<Stmt>,
         environment: Rc<RefCell<Environment>>,
     ) -> Result<(), RuntimeError> {
-       /*  let previous = Rc::clone(&self.environment);
-        self.environment = Rc::clone(&environment);
-        self.interpret(stmts)?;
-        self.environment = previous;
-        Ok(())*/
+        
 
         let previous = self.environment.clone();
 
@@ -340,6 +362,24 @@ impl InterpretVisitor {
             Value::Boolean(bool) => *bool,
             Value::NativeFunction(_) => true,
             Value::Function(_) => true,
+        }
+    }
+
+    pub fn resolve(&mut self, name: &Token, depth: usize) {
+        //println!("inserting variable : {} at {} ", &name.lexeme, depth);
+        self.locals.insert(name.clone(), depth as i32);
+    }
+
+    fn lookup_variable(&self, name: &Token) -> Result<Value, RuntimeError> {
+
+        if let Some(distance) = self.locals.get(name) {
+          //  println!("distance : {:?}",distance);
+          //  println!("envitonnement : {:?}",self.environment);
+          //  println!("locals : {:?}",self.locals);
+            self.environment.borrow().get_at(*distance as usize,&name.lexeme)
+           
+        } else {
+            self.global.borrow().get(&name)
         }
     }
 }

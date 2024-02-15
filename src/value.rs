@@ -70,7 +70,7 @@ impl Callable for Function {
     ) -> Result<Value, RuntimeError> {
 
 
-
+        //println!("////////////////////////////////////{:?}",&self.closure);
         let environment = Rc::new(RefCell::new(Environment::new_enclosed(&self.closure,get_counter())));
         increment_counter();
 
