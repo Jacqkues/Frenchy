@@ -20,7 +20,7 @@ use crate::{
 pub struct InterpretVisitor {
     pub global: Rc<RefCell<Environment>>,
     environment: Rc<RefCell<Environment>>,
-    locals: HashMap<Token, i32>,
+    locals: HashMap<Token, usize>,
 }
 
 impl ExprVisitor for InterpretVisitor {
@@ -28,6 +28,7 @@ impl ExprVisitor for InterpretVisitor {
 
     fn visit_call_expr(&mut self, expr: &crate::expr::CallExp) -> Self::Output {
         let callee = self.evaluate(&expr.callee)?;
+        
         let mut arguments = Vec::new();
         for argument in &expr.arguments {
             let arg = self.evaluate(argument)?;
@@ -65,6 +66,7 @@ impl ExprVisitor for InterpretVisitor {
                         ),
                     });
                 }
+                println!("call function : {:?}", &function.stmt.name);
                 function.call(self, arguments)
             }
             _ => Err(RuntimeError::Error {
@@ -186,7 +188,7 @@ impl StmtVisitor for InterpretVisitor {
         match stmt.value {
             Some(ref expr) => {
                 let value = self.evaluate(expr)?;
-               // println!("\t\t\t\t[return value : {}]", &value);
+                println!("[return value : {}]", &value);
                 Err(RuntimeError::Return(value))
             }
             None => Err(RuntimeError::Return(Value::Nil)),
@@ -366,8 +368,8 @@ impl InterpretVisitor {
     }
 
     pub fn resolve(&mut self, name: &Token, depth: usize) {
-        //println!("inserting variable : {} at {} ", &name.lexeme, depth);
-        self.locals.insert(name.clone(), depth as i32);
+        println!("inserting variable : {} at {} ", &name.lexeme, depth);
+        self.locals.insert(name.clone(), depth );
     }
 
     fn lookup_variable(&self, name: &Token) -> Result<Value, RuntimeError> {
@@ -376,7 +378,7 @@ impl InterpretVisitor {
           //  println!("distance : {:?}",distance);
           //  println!("envitonnement : {:?}",self.environment);
           //  println!("locals : {:?}",self.locals);
-            self.environment.borrow().get_at(*distance as usize,&name.lexeme)
+            self.environment.borrow().get_at(*distance,&name.lexeme)
            
         } else {
             self.global.borrow().get(&name)
