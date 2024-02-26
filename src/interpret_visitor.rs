@@ -19,7 +19,7 @@ use crate::{
 #[derive(Debug,Clone)]
 pub struct InterpretVisitor {
     pub global: Rc<RefCell<Environment>>,
-    environment: Rc<RefCell<Environment>>,
+    pub environment: Rc<RefCell<Environment>>,
     locals: HashMap<Token, usize>,
 }
 
@@ -29,7 +29,7 @@ impl ExprVisitor for InterpretVisitor {
     fn visit_call_expr(&mut self, expr: &crate::expr::CallExp) -> Self::Output {
         let callee = self.evaluate(&expr.callee)?;
         
-        let mut arguments = Vec::new();
+       /*  let mut arguments = Vec::new();
         for argument in &expr.arguments {
             let arg = self.evaluate(argument)?;
 
@@ -37,11 +37,13 @@ impl ExprVisitor for InterpretVisitor {
                 arguments.push(arg);
                
             }
-        }
+        }*/
+        let argument_values = expr.arguments.iter().map(|arg| self.evaluate(arg)).collect::<Result<Vec<Value>, RuntimeError>>()?;
+        let arguments = argument_values;
       //  println!("\t\t\t\t[argument : {:?}]", &arguments);
         match callee {
             Value::NativeFunction(function) => {
-                println!("call native function : {:?}", &function.name);
+              //  println!("call native function : {:?}", &function.name);
                 if arguments.len() != function.arity {
                     return Err(RuntimeError::Error {
                         token: expr.paren.clone(),
@@ -66,12 +68,14 @@ impl ExprVisitor for InterpretVisitor {
                         ),
                     });
                 }
-                println!("call function : {:?}", &function.stmt.name);
-                function.call(self, arguments)
+              //  println!("Avant l'appel de la fonction : {:?}", self.environment);
+               let res =  function.call(self, arguments);
+               // println!("Après l'appel de la fonction : {:?}", self.environment);
+                Ok(res.unwrap())
             }
             _ => Err(RuntimeError::Error {
                 token: expr.paren.clone(),
-                message: "Can only call functions and classes.".to_string(),
+                message: "Can only call functions ".to_string(),
             }),
         }
     }
@@ -188,7 +192,7 @@ impl StmtVisitor for InterpretVisitor {
         match stmt.value {
             Some(ref expr) => {
                 let value = self.evaluate(expr)?;
-                println!("[return value : {}]", &value);
+                //println!("[return value : {}]", &value);
                 Err(RuntimeError::Return(value))
             }
             None => Err(RuntimeError::Return(Value::Nil)),
@@ -206,9 +210,9 @@ impl StmtVisitor for InterpretVisitor {
         Ok(())
     }
     fn visit_while_stmt(&mut self, stmt: &crate::stmt::WhileStmt) -> Self::Output {
-        println!("while condition : {:?}", &stmt.condition);
+        //println!("while condition : {:?}", &stmt.condition);
         println!();
-        println!("while body : {:?} ", &stmt.body);
+      //  println!("while body : {:?} ", &stmt.body);
         while InterpretVisitor::is_truthy(&self.evaluate(&stmt.condition).unwrap()) {
             self.execute(&stmt.body);
         }
@@ -343,17 +347,17 @@ impl InterpretVisitor {
         stmts: &Vec<Stmt>,
         environment: Rc<RefCell<Environment>>,
     ) -> Result<(), RuntimeError> {
-        
-
         let previous = self.environment.clone();
-
         self.environment = environment;
-
-        self.interpret(stmts)?;
-
+    
+        let result = self.interpret(stmts);
+    
         self.environment = previous;
-
-        Ok(())
+    
+        match result {
+            Ok(_) => Ok(()),
+            Err(e) => Err(e),
+        }
     }
 
     fn is_truthy(value: &Value) -> bool {
@@ -368,7 +372,7 @@ impl InterpretVisitor {
     }
 
     pub fn resolve(&mut self, name: &Token, depth: usize) {
-        println!("inserting variable : {} at {} ", &name.lexeme, depth);
+        //println!("inserting variable : {} at {} ", &name.lexeme, depth);
         self.locals.insert(name.clone(), depth );
     }
 

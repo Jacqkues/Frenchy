@@ -54,6 +54,8 @@ impl Environment {
         if distance > 0 {
             let ancestor = self.ancestor(distance);
             ancestor.borrow_mut().values.insert(name.lexeme.clone(), value);
+        }else{
+           self.values.insert(name.lexeme.clone(), value);
         }
         //self.values.insert(name.lexeme.clone(), value);
         Ok(())
@@ -83,20 +85,7 @@ impl Environment {
         self.values.insert(name, value);
     }
     pub fn get(&self, name: &Token) -> Result<Value, RuntimeError> {
-      /**  if let Some(value) = self.values.get(&name.lexeme) {
-            return Ok(value.clone());
-        }
-
-        if let Some(enclosing) = &self.enclosing {
-            println!("Env id in enclosing: {:?}", self.id);
-            return enclosing.borrow().get(name);
-        }
-
-        Err(RuntimeError::Error {
-            token: name.clone(),
-            message: format!("Undefined variable '{}'.", name.lexeme),
-        })*/
-
+    
         let key = &*name.lexeme;
 
         if let Some(value) = self.values.get(key) {
