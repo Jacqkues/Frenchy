@@ -29,7 +29,7 @@ impl ExprVisitor for InterpretVisitor {
     fn visit_call_expr(&mut self, expr: &crate::expr::CallExp) -> Self::Output {
         let callee = self.evaluate(&expr.callee)?;
         
-       /*  let mut arguments = Vec::new();
+       let mut arguments = Vec::new();
         for argument in &expr.arguments {
             let arg = self.evaluate(argument)?;
 
@@ -37,13 +37,9 @@ impl ExprVisitor for InterpretVisitor {
                 arguments.push(arg);
                
             }
-        }*/
-        let argument_values = expr.arguments.iter().map(|arg| self.evaluate(arg)).collect::<Result<Vec<Value>, RuntimeError>>()?;
-        let arguments = argument_values;
-      //  println!("\t\t\t\t[argument : {:?}]", &arguments);
+        }
         match callee {
             Value::NativeFunction(function) => {
-              //  println!("call native function : {:?}", &function.name);
                 if arguments.len() != function.arity {
                     return Err(RuntimeError::Error {
                         token: expr.paren.clone(),
@@ -57,7 +53,6 @@ impl ExprVisitor for InterpretVisitor {
                 function.call(self, arguments)
             }
             Value::Function(function) => {
-                // println!("{}({:?})", &function.stmt.name, &arguments);
                 if arguments.len() != function.stmt.params.len() {
                     return Err(RuntimeError::Error {
                         token: expr.paren.clone(),
@@ -97,27 +92,12 @@ impl ExprVisitor for InterpretVisitor {
     }
 
     fn visit_variable_expr(&mut self, expr: &crate::expr::VariableExpr) -> Self::Output {
-        //println!("---------------getting variable : {:?}", &expr.name.lexeme);
-       // let ret = self.environment.borrow_mut().get(&expr.name).unwrap();
-       /*  println!(
-            "\tlecture de la variable : {:?} : {:?}",
-            &expr.name.lexeme, &ret
-        );*/
-
+      
         Ok(self.lookup_variable(&expr.name).unwrap())
     }
 
     fn visit_assign_var_expr(&mut self, expr: &crate::expr::AssignVarExpr) -> Self::Output {
-       /*  let val = self.evaluate(&expr.value)?;
-        println!(
-            "---------------assigning variable {:?} : {:?}",
-            &expr.name, &val
-        );
-        self.environment
-            .borrow_mut()
-            .assign(&expr.name, val.clone())?;
-        Ok(val)*/
-
+       
         let val = self.evaluate(&expr.value)?;
 
         if let Some(distance) = self.locals.get(&expr.name) {
@@ -132,13 +112,12 @@ impl ExprVisitor for InterpretVisitor {
     fn visit_binary_expr(&mut self, expr: &BinaryExpr) -> Result<Value, RuntimeError> {
         let left = self.evaluate(&expr.left)?;
         let right = self.evaluate(&expr.right)?;
-       // println!("\t [operation : {}],", &expr);
         match expr.operator.lexeme.as_str() {
             "+" => Ok(left + right),
             "-" => Ok(left - right),
             "*" => Ok(left * right),
             "/" => Ok(left / right),
-            // "%" => Ok(left % right),
+            "%" => Ok(left % right),
             ">" => Ok(Value::Boolean(left > right)),
             "<" => Ok(Value::Boolean(left < right)),
             ">=" => Ok(Value::Boolean(left >= right)),
@@ -192,7 +171,6 @@ impl StmtVisitor for InterpretVisitor {
         match stmt.value {
             Some(ref expr) => {
                 let value = self.evaluate(expr)?;
-                //println!("[return value : {}]", &value);
                 Err(RuntimeError::Return(value))
             }
             None => Err(RuntimeError::Return(Value::Nil)),
