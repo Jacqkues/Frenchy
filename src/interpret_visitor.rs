@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::rc::Rc;
 use std::{ cell::RefCell};
 
-use crate::builtin::{afficher, clock};
+use crate::builtin::{afficher, clock, lire, to_int};
 use crate::callable::Callable;
 use crate::stmt::ReturnStmt;
 use crate::token::Token;
@@ -278,11 +278,28 @@ impl InterpretVisitor {
             function: afficher,
         };
 
+
+        let read_function = NativeFunction {
+            arity: 1,
+            name: "lire".to_string(),
+            function: lire,
+        };
+
+        let to_int_function = NativeFunction {
+            arity: 1,
+            name: "en_nombre".to_string(),
+            function: to_int,
+        };
+
+        let to_int_value = Value::NativeFunction(to_int_function);
         let clock_value = Value::NativeFunction(clock_function);
         let print_value = Value::NativeFunction(print_function);
+        let read_value = Value::NativeFunction(read_function);
         global.borrow_mut().define("clock".to_string(), clock_value);
-
+        global.borrow_mut().define("Nombre".to_string(), to_int_value);
         global.borrow_mut().define("print".to_string(), print_value);
+
+        global.borrow_mut().define("lire".to_string(), read_value);
 
         InterpretVisitor {
             global: Rc::clone(&global),

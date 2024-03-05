@@ -21,7 +21,7 @@ impl<'a> ResolverVisitor<'a> {
     }
 
     fn begin_scope(&mut self) {
-        println!("Begin scope");
+        
         self.scopes.push(HashMap::new());
     }
 
@@ -106,7 +106,6 @@ impl ExprVisitor for ResolverVisitor<'_> {
     }
 
     fn visit_variable_expr(&mut self, expr: &crate::expr::VariableExpr) -> Self::Output {
-        println!("Visiting variable expr: {}", expr);
         if let Some(scope) = self.scopes.last() {
             if let Some(declared) = scope.get(&expr.name.lexeme) {
                 if !declared {

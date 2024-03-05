@@ -66,7 +66,17 @@ impl Lexer<'_> {
     }
 
     fn add_token_literal(&mut self, token_type: TokenType, literal: Option<String>) {
-        let text = self.source[self.start..self.current].to_string();
+
+        let text = match token_type{
+            TokenType::STRING => {
+                self.source[self.start+1..self.current-1].to_string()
+            }
+            _ => {
+                self.source[self.start..self.current].to_string()
+            }
+        };
+
+       
         let literal = match literal {
             Some(l) => l,
             None => text.clone(),

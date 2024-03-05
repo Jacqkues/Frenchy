@@ -14,3 +14,17 @@ pub fn afficher(_interpreter: &mut InterpretVisitor, arguments: Vec<Value>) -> R
     Ok(Value::Nil)
 }
 
+pub fn lire(_interpreter: &mut InterpretVisitor, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    for arg in arguments {
+      println!("{:?}", arg.to_string());
+    }
+
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input).unwrap();
+    let input = input.trim();
+    Ok(Value::String(input.to_string()))
+}
+
+pub fn to_int(_interpreter: &mut InterpretVisitor, arguments: Vec<Value>) -> Result<Value, RuntimeError> {
+    Ok(Value::Number(arguments[0].to_string().parse::<f64>().unwrap()))
+}

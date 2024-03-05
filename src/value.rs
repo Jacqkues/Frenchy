@@ -75,7 +75,7 @@ impl Callable for Function {
         increment_counter();
 
        // println!("Function call : {:?}",self.stmt.name.lexeme);
-        println!("\t Env id : {:?}",environment.borrow().id);
+
         for (param, arg) in self.stmt.params.iter().zip(arguments.iter()) {
             environment
                 .borrow_mut()

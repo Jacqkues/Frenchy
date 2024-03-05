@@ -1,4 +1,4 @@
-use std::{io::Write, fs};
+use std::io::{self, Write};
 
 mod error;
 mod expr;
@@ -14,7 +14,7 @@ mod environment;
 mod callable;
 mod builtin;
 mod resolver_visitor;
-use std::process::Command;
+
 
 
 
@@ -25,67 +25,61 @@ use std::process::Command;
 
 
 fn main() {
-  
-    let _output = Command::new("clear")
-        .output()
-        .expect("Failed to execute command");
-  /*   let input = String::from("var x = 5; afficher x; x = x + 2; afficher x;");
-    let mut lexer = scanner::Lexer::new(&input);
-    lexer.scan_tokens();
-
-    for token in &lexer.tokens {
-        println!("{:?}", token);
-    }
-
-    let mut parser = parser::Parser::new(lexer.tokens);
-
-    let expr = parser.parse();
-
-    //let mut visitor = print_visitor::PrintVisitor;
-   // visitor.print(&expr);
-    let mut visitor_inter = interpret_visitor::InterpretVisitor::new();
-    let result = visitor_inter.interpret(&expr);
-    match result {
-        Ok(value) => println!("Result: {:?}", value),
-        Err(e) => println!("{}", e),
-    }*/
-
-
-   /* let mut interpreter = interpret_visitor::InterpretVisitor::new();
+    let mut interpreter = interpret_visitor::InterpretVisitor::new();
 
     loop {
-        print!("> ");
-        std::io::stdout().flush().unwrap();
         let mut input = String::new();
-        std::io::stdin().read_line(&mut input).unwrap();
+        let mut first_line = true;
+        let mut in_a_scope = false;
+        let mut in_a_function = false;
+        let mut indent = 0;
+        loop {
+            if first_line {
+                print!("> ");
+                first_line = false;
+            } else if in_a_function{
+                print!(".... ");
+            }else{
+                print!(".. ");
+            }
+            io::stdout().flush().unwrap();
+
+            let mut line = String::new();
+            io::stdin().read_line(&mut line).unwrap();
+
+            input.push_str(&line);
+
+            if line.trim_end().ends_with("debut") {
+               
+               in_a_function = true;
+            }
+
+            if line.trim_end().ends_with("fin") {
+                in_a_function = false;
+                break;
+            }
+
+            if line.trim_end().ends_with(';') && !in_a_function{
+                first_line = true;
+                break;
+            }
+
+        }
+
         let mut lexer = scanner::Lexer::new(&input);
         lexer.scan_tokens();
         let mut parser = parser::Parser::new(lexer.tokens);
         let expr = parser.parse();
+
+        {
+            let mut resolver = resolver_visitor::ResolverVisitor::new(&mut interpreter);
+            resolver.resolve(&expr);
+        }
+
         let result = interpreter.interpret(&expr);
         match result {
-            Ok(value) => println!("Result: {:?}", value),
+            Ok(value) => println!("{:?}", value),
             Err(e) => println!("{}", e),
         }
-    }*/
-
-
-    let mut interpreter = interpret_visitor::InterpretVisitor::new();
-    let mut resolver = resolver_visitor::ResolverVisitor::new(&mut interpreter);
-
-    let filename = "/home/cytech/Desktop/Projet_Perso/Frenchy/frenchy/target/debug/main.fr";
-    let input = fs::read_to_string(filename).expect("Failed to read file");
-
-    let mut lexer = scanner::Lexer::new(&input);
-    lexer.scan_tokens();
-    let mut parser = parser::Parser::new(lexer.tokens);
-    let expr = parser.parse();
-   // println!("{:?}",expr);
-    resolver.resolve(&expr);
-    let result = interpreter.interpret(&expr);
-    match result {
-        Ok(value) => println!("Result: {:?}", value),
-        Err(e) => println!("{}", e),
     }
-
 }
