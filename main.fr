@@ -1,0 +1,13 @@
+fonction fib(n)
+debut
+si n <= 1 alors
+    retourner n;
+sinon alors
+    retourner fib(n-1) + fib(n-2);
+finsi
+fin
+
+variable x;
+x <- lire("entrer un nombre");
+
+ecrire fib(Nombre(x));
