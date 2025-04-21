@@ -75,8 +75,6 @@ impl Lexer<'_> {
                 self.source[self.start..self.current].to_string()
             }
         };
-
-       
         let literal = match literal {
             Some(l) => l,
             None => text.clone(),

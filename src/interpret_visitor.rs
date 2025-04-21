@@ -287,7 +287,7 @@ impl InterpretVisitor {
 
         let to_int_function = NativeFunction {
             arity: 1,
-            name: "en_nombre".to_string(),
+            name: "entier".to_string(),
             function: to_int,
         };
 
